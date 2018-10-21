@@ -1,0 +1,135 @@
+---
+title: "ChronAmMetadata"
+author: "Alex Leslie"
+date: "October 21, 2018"
+output: pdf_document
+  toc: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (!(require(dplyr))) {
+  install.packages("dplyr", repos = "http://cran.us.r-project.org")
+}
+if (!(require(stringr))) {
+  install.packages("stringr", repos = "http://cran.us.r-project.org")
+}
+if (!(require(ggplot2))) {
+  install.packages("ggplot2", repos = "http://cran.us.r-project.org")
+}
+library("dplyr")
+library("stringr")
+library("ggplot2")
+```
+
+# Metadata Tidying
+```{r}
+#reading in
+papers <- readLines("https://chroniclingamerica.loc.gov/newspapers.txt")
+
+#reformating as data frame
+papers <- strsplit(papers, "\\|")
+paperdata <- data.frame(matrix(unlist(papers), nrow=(length(papers)), byrow=T), stringsAsFactors=FALSE)
+paperdata <- paperdata[-c(1),]
+
+#removing spaces on LCCN
+paperdata$LCCN <- gsub("\\s(\\S*)\\s", "\\1", paperdata$X4)
+
+#dates into proper format
+paperdata <- paperdata %>%
+  mutate(Start_Date = gsub("^\\s(.*)\\s$", "\\1", paperdata$X8)) %>%
+  mutate(End_Date = gsub("^\\s(.*)\\s$", "\\1", paperdata$X9)) %>%
+  mutate(Start_Date = gsub("Sept.", "Sep", Start_Date)) %>%
+  mutate(End_Date = gsub("Sept.", "Sep", End_Date)) %>%
+  mutate(Start_Date = as.Date(gsub("[[:punct:]]", "", Start_Date), "%b%d%Y")) %>%
+  mutate(End_Date = as.Date(gsub("[[:punct:]]", "", End_Date), "%b%d%Y"))
+  
+#fixing title errors
+paperdata$Title <- gsub("^\\s(.*\\.)\\s\\(.*$", "\\1", paperdata$X3)
+paperdata$Title <- gsub("^\\s(.*\\.)\\s\\[.*$", "\\1", paperdata$Title)
+paperdata$Title <- gsub("&#39;", "'", paperdata$Title)
+paperdata$Title <- gsub("&amp;", "&", paperdata$Title)
+
+#extracting publishing town and state
+paperdata$X3 <- gsub("\\(\\[", "\\(", paperdata$X3)
+paperdata$X3 <- gsub("\\]\\)", "\\)", paperdata$X3)
+paperdata$State <- gsub("^\\s(.*)\\s$", "\\1", paperdata$X2)
+paperdata$Town <- gsub(".*\\((.*)\\).*", "\\1", paperdata$X3)
+paperdata$Town <- gsub("\\,.*", "", paperdata$Town)
+paperdata$Town <- gsub("\\[.*", "", paperdata$Town)
+paperdata$Town <- gsub("(\\S)\\s$", "\\1", paperdata$Town)
+paperdata <- paperdata %>% mutate(Town = ifelse(State=="District of Columbia", "Washington City", Town))
+
+#remove duplicate entries
+paperdata <- paperdata[-which(duplicated(paperdata)),]
+
+#cycling out old columns
+paperdata <- paperdata %>%
+  select(Title, LCCN, Start_Date, End_Date, Town, State)
+```
+
+# Consolidating Multi-Location Papers
+```{r}
+#for identifying non-duplicate entries with the same LCCN:
+doubles <- paperdata %>%
+  group_by(LCCN) %>%
+  summarize(count=n()) %>%
+  filter(count>1) %>%
+  arrange(desc(count))
+
+paperdata <- paperdata[-which(paperdata$State=="Colorado" & paperdata$Town=="Salt Lake City"),]
+paperdata <- paperdata[-which(paperdata$State=="Arkansas" & paperdata$Town=="JAH-ville"),]
+paperdata <- paperdata[-which(paperdata$State=="Minnesota" & paperdata$Town=="Fargo"),]
+paperdata <- paperdata[-which(paperdata$State=="Idaho" & paperdata$Town=="Newport"),]
+paperdata <- paperdata[-which(paperdata$State=="Ohio" & paperdata$Town=="Lexington"),]
+paperdata <- paperdata[-which(paperdata$State=="Virginia" & paperdata$Town=="Bristol" & paperdata$Title=="The news."),]
+paperdata <- paperdata[-which(paperdata$State=="Tennessee" & paperdata$Town=="Bristol" & paperdata$Title=="Bristol news."),]
+paperdata <- paperdata[-which(paperdata$Title=="Alexandria gazette." & paperdata$Town=="Washington City"),]
+paperdata <- paperdata[-which(paperdata$Title=="The broad ax." & paperdata$State=="Utah"),]
+paperdata$Town[which(paperdata$Title=="The broad ax." & paperdata$Town=="Salt Lake City")] <- "Chicago"
+paperdata <- paperdata[-which(paperdata$State=="Ohio" & paperdata$Town=="Knoxville"),]
+paperdata <- paperdata[-which(paperdata$State=="Illinois" & paperdata$Town=="Saint Paul"),] #(removes two)
+paperdata <- paperdata[-which(paperdata$State=="Alabama" & paperdata$Town=="Griffin"),]
+paperdata <- paperdata[-which(paperdata$State=="Indiana" & paperdata$LCCN=="sn2007058207"),]
+paperdata <- paperdata[-which(paperdata$State=="Alabama" & paperdata$Town=="Memphis"),]
+paperdata <- paperdata[-which(paperdata$State=="Mississippi" & paperdata$Town=="Memphis"),]
+paperdata <- paperdata[-which(paperdata$State=="Georgia" & paperdata$Town=="Memphis"),]
+paperdata <- paperdata[-which(paperdata$State=="District of Columbia" & paperdata$LCCN=="2012271201"),]
+paperdata <- paperdata[-which(paperdata$State=="Massachusetts" & paperdata$LCCN=="2012271201"),]
+paperdata <- paperdata[-which(paperdata$State=="Piedmont" & paperdata$LCCN=="2012271201"),]
+paperdata <- paperdata[-which(paperdata$State=="Oregon" & paperdata$Town=="New Orleans"),]
+
+paperdata$Town[which(paperdata$Title=="Pokrok." & paperdata$State=="Ohio")] <- "Cleveland"
+paperdata <- paperdata[-which(paperdata$Title=="Pokrok." & paperdata$Town=="Chicago"),] #removes three
+paperdata <- paperdata[-which(paperdata$Title=="The Chattanooga Daily Rebel." & paperdata$State!="Tennessee"),] #removes two
+paperdata <- paperdata[-which(paperdata$Title=="Uusi kotimaa." & paperdata$State!="Minnesota"),] #removes two
+paperdata$Town[which(paperdata$LCCN=="sn83035526" & paperdata$State=="Ohio")] <- "Cleveland"
+paperdata <- paperdata[-which(paperdata$LCCN=="sn83035526" & paperdata$State!="Ohio"),] #removes two
+paperdata$Town[which(paperdata$LCCN=="10021978" & paperdata$State=="Virginia")] <- "Richmond"
+paperdata <- paperdata[-which(paperdata$LCCN=="10021978" & paperdata$State=="Georgia"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn79007943" & paperdata$State=="Pennsylvania"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn82014594" & paperdata$State=="Virginia"),]
+paperdata$Town[which(paperdata$Title=="Gazette of the United-States." & paperdata$State=="Pennsylvania")] <- "Philadelphia"
+paperdata <- paperdata[-which(paperdata$Title=="Gazette of the United-States." & paperdata$State=="New York"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn83035274" & paperdata$State=="Michigan"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn83035644" & paperdata$State=="Michigan"),]
+paperdata <- paperdata[-which(paperdata$Title=="Ameryka echo." & paperdata$State=="Illinois"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn84024547" & paperdata$State=="Ohio"),]
+paperdata <- paperdata[-which(paperdata$Title=="Ceredo crescent." & paperdata$State=="Virginia"),]
+paperdata <- paperdata[-which(paperdata$Title=="Winchester daily bulletin." & paperdata$State=="Georgia"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn88076576")[2],]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn88078683" & paperdata$State=="New York"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn89074935" & paperdata$State=="Nebraska"),]
+paperdata$Town[which(paperdata$LCCN=="sn89074935")] <- "Bismarck"
+paperdata <- paperdata[-which(paperdata$Title=="Zgoda = Unity." & paperdata$State=="Wisconsin"),]
+paperdata$Town[which(paperdata$Title=="Zgoda = Unity.")] <- "Chicago"
+paperdata <- paperdata[-which(paperdata$Title=="The Llano colonist." & paperdata$State=="California"),]
+```
+
+```{r}
+#there should be 2663 observations remaining in data frame; if more, newspapers have been added to since last update
+write.csv(paperdata, "clean_paperdata_oct18.csv")
+```
+
