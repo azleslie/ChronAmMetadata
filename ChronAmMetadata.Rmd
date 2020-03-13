@@ -68,6 +68,8 @@ paperdata <- paperdata[-which(duplicated(paperdata)),]
 #cycling out old columns
 paperdata <- paperdata %>%
   select(Title, LCCN, Start_Date, End_Date, Town, State)
+
+paperdata <- paperdata[-length(paperdata$LCCN),]
 ```
 
 # Consolidating Multi-Location Papers
@@ -126,10 +128,17 @@ paperdata$Town[which(paperdata$LCCN=="sn89074935")] <- "Bismarck"
 paperdata <- paperdata[-which(paperdata$Title=="Zgoda = Unity." & paperdata$State=="Wisconsin"),]
 paperdata$Town[which(paperdata$Title=="Zgoda = Unity.")] <- "Chicago"
 paperdata <- paperdata[-which(paperdata$Title=="The Llano colonist." & paperdata$State=="California"),]
+
+paperdata <- paperdata[-which(paperdata$LCCN=="sn87065610" & paperdata$State!="Mississippi"),] #removes two
+paperdata <- paperdata[-which(paperdata$LCCN=="sn85044791" & paperdata$State!="Mississippi"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn86071520" & paperdata$State!="Virginia"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn90065027" & paperdata$State!="Connecticut"),]
+paperdata <- paperdata[-which(paperdata$LCCN=="sn93060356" & paperdata$State!="Michigan"),]
 ```
 
 ```{r}
-#there should be 2663 observations remaining in data frame; if more, newspapers have been added to since last update
-write.csv(paperdata, "clean_paperdata_oct18.csv")
+#there should be 3122 observations remaining in data frame; if more, newspapers have been added to since last update
+write.csv(paperdata, "clean_paperdata_mar20.csv")
 ```
+
 
