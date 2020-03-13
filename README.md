@@ -5,11 +5,11 @@ Many of the consolidation choices merely remove a repeated entry. Others remove 
 
 Error reporting is much appreciated.
 
-Up to date as of October 21, 2018; the comment before `write.csv` indicates the sum to check for possible updates against.
+Up to date as of March 13, 2020; the comment before `write.csv` indicates the sum to check for possible updates against.
 
 ## File Guide
-**clean_paperdata_oct18.csv** Tidied metadata file for newspapers in Chronicling America.
+**clean_paperdata_mar20.csv** Tidied metadata file for newspapers in Chronicling America.
 
-**clean_paperdata+_oct18.csv** The same file as above but with two additional variables: latitude and longitude coordinates for the publishing location of each newspaper and the population according to the 1880 census for the publishing location of each newspaper with over 20,000 inhabitants.
+**clean_paperdata+_mar20.csv** The same file as above but with two additional variables: latitude and longitude coordinates for the publishing location of each newspaper and the population according to the 1880 census for the publishing location of each newspaper with over 20,000 inhabitants.
 
-**ChronAmMetadata.Rmd** Used to produce clean_paperdata_oct18.csv.
+**ChronAmMetadata.Rmd** Used to produce clean_paperdata_mar20.csv.
